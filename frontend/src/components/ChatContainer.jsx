@@ -1,5 +1,5 @@
 import { useChatStore } from "../store/useChatStore";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
@@ -17,6 +17,7 @@ const ChatContainer = () => {
   } = useChatStore();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
+  const [activeImage, setActiveImage] = useState(null);
 
   useEffect(() => {
     getMessages(selectedUser._id);
@@ -75,7 +76,8 @@ const ChatContainer = () => {
                 <img
                   src={message.image}
                   alt="Attachment"
-                  className="sm:max-w-50 rounded-md mb-2"
+                  className="sm:max-w-50 rounded-md mb-2 cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setActiveImage(message.image)}
                 />
               )}
               {message.text && <p>{message.text}</p>}
@@ -85,6 +87,27 @@ const ChatContainer = () => {
       </div>
 
       <MessageInput />
+
+      {activeImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm cursor-zoom-out"
+          onClick={() => setActiveImage(null)}
+        >
+          <div className="relative max-w-5xl max-h-[90vh] p-2 flex flex-col items-center">
+            <button 
+              className="absolute -top-12 right-2 text-white hover:text-gray-300 text-3xl font-light bg-black/20 hover:bg-black/40 w-10 h-10 flex items-center justify-center rounded-full transition-colors"
+              onClick={() => setActiveImage(null)}
+            >
+              &times;
+            </button>
+            <img 
+              src={activeImage} 
+              alt="Full size attachment" 
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

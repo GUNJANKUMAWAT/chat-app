@@ -1,12 +1,13 @@
 import { useRef, useState } from "react"
 import { useChatStore } from "../store/useChatStore";
-import { Image, Send, X } from "lucide-react";
+import { Image, Send, X, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 const MessageInput = () => {
 
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
+  const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef(null);
   const { sendMessage } = useChatStore();
 
@@ -32,8 +33,10 @@ const MessageInput = () => {
   const handleSendMessage = async(e) => {
     e.preventDefault();
     if(!text.trim() && !imagePreview) return;
+    if(isSending) return;
 
     try{
+      setIsSending(true);
       await sendMessage({
         text: text.trim(),
         image: imagePreview,
@@ -45,6 +48,8 @@ const MessageInput = () => {
       if(fileInputRef.current) fileInputRef.current.value = "";
     } catch(error) {
       console.error("Failed to send message:", error);
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -78,6 +83,7 @@ const MessageInput = () => {
             placeholder="Type a message..."
             value={text}
             onChange={(e) => setText(e.target.value)}
+            disabled={isSending}
           />
           <input
             type="file"
@@ -85,6 +91,7 @@ const MessageInput = () => {
             className="hidden"
             ref={fileInputRef}
             onChange={handleImageChange}
+            disabled={isSending}
           />
 
           <button
@@ -92,6 +99,7 @@ const MessageInput = () => {
             className={`hidden sm:flex btn btn-circle
                      ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`}
             onClick={() => fileInputRef.current?.click()}
+            disabled={isSending}
           >
             <Image size={20} />
           </button>
@@ -99,10 +107,14 @@ const MessageInput = () => {
 
         <button
           type="submit"
-          className="btn btn-sm btn-circle"
-          disabled={!text.trim() && !imagePreview}
+          className="btn btn-sm btn-circle flex items-center justify-center"
+          disabled={(!text.trim() && !imagePreview) || isSending}
         >
-          <Send size={22} />
+          {isSending ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <Send size={22} />
+          )}
         </button>
       </form>    
     </div>  
