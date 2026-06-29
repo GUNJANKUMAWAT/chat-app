@@ -17,7 +17,9 @@ const Sidebar = () => {
 
   if (isUsersLoading) return <SidebarSkeleton />;
 
-  const onlineCount = onlineUsers.includes(authUser?._id) ? onlineUsers.length - 1 : onlineUsers.length;
+  // Count only users that are online AND exist in the database
+  // This prevents ghost socket connections from deleted users inflating the count
+  const onlineCount = filteredUsers.length;
 
   return (
     <aside className="h-full w-20 lg:w-72 border-r border-base-300 flex flex-col transition-all duration-200">
