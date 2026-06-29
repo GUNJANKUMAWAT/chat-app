@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { Camera, Mail, User } from "lucide-react";
+import { compressImage } from "../lib/utils";
 
 const ProfilePage = () => {
   const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
@@ -10,16 +11,15 @@ const ProfilePage = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-
-    reader.readAsDataURL(file);
-
-    reader.onload = async () => {
-      const base64Image = reader.result;
-      setSelectedImg(base64Image);
-      await updateProfile({ profilePic: base64Image });
-    };
+    try {
+      const compressedBase64 = await compressImage(file);
+      setSelectedImg(compressedBase64);
+      await updateProfile({ profilePic: compressedBase64 });
+    } catch (error) {
+      console.error("Error updating profile image:", error);
+    }
   };
+
 
   return (
     <div className="min-h-screen pt-20 pb-10">

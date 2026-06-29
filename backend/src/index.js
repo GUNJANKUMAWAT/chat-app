@@ -6,6 +6,8 @@ import cors from "cors";
 import path from "path";
 
 import { connectDB } from "./lib/db.js";
+import User from "./models/user.model.js";
+import Message from "./models/message.model.js";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
@@ -25,6 +27,7 @@ app.use(cookieParser());
 app.use(cors({
     origin: "http://localhost:5173",
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
 }));
 
 app.use("/api/auth", authRoutes);
@@ -38,7 +41,37 @@ if(process.env.NODE_ENV === "production"){
     });
 }    
 
+async function cleanInactiveUsers() {
+    try {
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        // Find users created more than 24 hours ago
+        const users = await User.find({ createdAt: { $lt: oneDayAgo } });
+        
+        let deletedCount = 0;
+        for (const user of users) {
+            const msgCount = await Message.countDocuments({
+                $or: [
+                    { senderId: user._id },
+                    { receiverId: user._id }
+                ]
+            });
+            if (msgCount === 0) {
+                await User.findByIdAndDelete(user._id);
+                deletedCount++;
+            }
+        }
+        if (deletedCount > 0) {
+            console.log(`[Database Cleanup] Automatically deleted ${deletedCount} inactive users with no message history.`);
+        }
+    } catch (error) {
+        console.error("Error in cleanInactiveUsers job:", error);
+    }
+}
+
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
     connectDB();   
+    // Run cleanup on start and every 24 hours
+    cleanInactiveUsers();
+    setInterval(cleanInactiveUsers, 24 * 60 * 60 * 1000);
 });   

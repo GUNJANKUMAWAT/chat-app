@@ -36,12 +36,12 @@ export const getMessages = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
     try{
-        const {text, image} = req.body;
+        const {text, image, iv, encryptedKeyForReceiver, encryptedKeyForSender, isEncrypted} = req.body;
         const {id: receiverId} = req.params;
         const senderId = req.user._id;
 
-        let imageUrl;
-        if(image){
+        let imageUrl = image;
+        if(image && !isEncrypted){
             const uploadResponse = await cloudinary.uploader.upload(image);
             imageUrl = uploadResponse.secure_url;
         }
@@ -51,13 +51,23 @@ export const sendMessage = async (req, res) => {
             receiverId,
             text,
             image: imageUrl,
+            iv,
+            encryptedKeyForReceiver,
+            encryptedKeyForSender,
+            isEncrypted: isEncrypted || false,
         });
 
         await newMessage.save();
 
-        const receiverSocketId = getReceiverSocketId(receiverId);
-        if(receiverSocketId){
-            io.to(receiverSocketId).emit("newMessage", newMessage);
+        const receiverSocketIds = getReceiverSocketId(receiverId);
+        if (receiverSocketIds) {
+            if (Array.isArray(receiverSocketIds)) {
+                receiverSocketIds.forEach(socketId => {
+                    io.to(socketId).emit("newMessage", newMessage);
+                });
+            } else {
+                io.to(receiverSocketIds).emit("newMessage", newMessage);
+            }
         }
 
         res.status(201).json(newMessage);
